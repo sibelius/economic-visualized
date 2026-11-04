@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { startTicker } from "./ticker";
 
 /**
  * Drives a simulation with requestAnimationFrame. `step` is called `speed`
- * times per frame while running. Returns play/pause state and a frame counter
- * you can use to trigger re-renders when your sim state lives in a ref.
+ * times per 1/60 second while running, independent of display refresh rate.
+ * Returns play/pause state and a frame counter you can use to trigger
+ * re-renders when your sim state lives in a ref.
  */
 export function useTicker(step: () => void, { speed = 1, autoplay = false }: { speed?: number; autoplay?: boolean } = {}) {
   const [running, setRunning] = useState(autoplay);
@@ -17,19 +19,11 @@ export function useTicker(step: () => void, { speed = 1, autoplay = false }: { s
 
   useEffect(() => {
     if (!running) return;
-    let raf = 0;
-    let acc = 0;
-    const loop = () => {
-      acc += speedRef.current;
-      while (acc >= 1) {
-        stepRef.current();
-        acc -= 1;
-      }
-      setFrame((f) => f + 1);
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    return startTicker(
+      () => stepRef.current(),
+      () => speedRef.current,
+      () => setFrame((f) => f + 1),
+    );
   }, [running]);
 
   return {
